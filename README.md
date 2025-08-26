@@ -36,15 +36,15 @@ This project is deployed as an AWS Lambda function, triggered by GitHub webhooks
    pip install -r requirements.txt
 
 2. **Package the Lambda function**
-# Make a folder for dependencies
-mkdir package
-pip install -r requirements.txt --target ./package
+   # Make a folder for dependencies
+   mkdir package
+   pip install -r requirements.txt --target ./package
 
-# Copy Lambda function and utils
-cp lambda_function.py package/
-cp -r utils package/
+   # Copy Lambda function and utils
+   cp lambda_function.py package/
+   cp -r utils package/
 
-# Zip everything
-cd package
-zip -r ../lambda_package.zip .
-cd ..
+   # Zip everything
+   cd package
+   zip -r ../lambda_pr_webhook.zip .
+   cd ..
