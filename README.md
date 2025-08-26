@@ -27,7 +27,24 @@ This project showcases full-stack development skills, integrating serverless bac
 
 ## Getting Started
 
-1. **Clone the Repository**
-```bash
-git clone https://github.com/your-username/ai-pr-review-assistant.git
-cd ai-pr-review-assistant
+This project is deployed as an AWS Lambda function, triggered by GitHub webhooks. To set up or update the Lambda function:
+
+1. **Prepare your Python environment**  
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+
+2. **Package the Lambda function**
+# Make a folder for dependencies
+mkdir package
+pip install -r requirements.txt --target ./package
+
+# Copy Lambda function and utils
+cp lambda_function.py package/
+cp -r utils package/
+
+# Zip everything
+cd package
+zip -r ../lambda_package.zip .
+cd ..
