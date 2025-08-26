@@ -36,6 +36,7 @@ This project is deployed as an AWS Lambda function, triggered by GitHub webhooks
    pip install -r requirements.txt
 
 2. **Package the Lambda function**
+   ```
    # Make a folder for dependencies
    mkdir package
    pip install -r requirements.txt --target ./package
@@ -48,3 +49,4 @@ This project is deployed as an AWS Lambda function, triggered by GitHub webhooks
    cd package
    zip -r ../lambda_pr_webhook.zip .
    cd ..
+   # Upload lambda_pr_webhook into lambda
