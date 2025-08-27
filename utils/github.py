@@ -3,8 +3,7 @@ import os
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
-def get_pr_diff(pr_url: str) -> str:
-    diff_url = pr_url + ".diff"
+def get_pr_diff(diff_url: str) -> str:
     resp = requests.get(diff_url, headers={"Authorization": f"token {GITHUB_TOKEN}"})
     resp.raise_for_status()
     return resp.text
