@@ -3,11 +3,19 @@ import os
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
-def get_pr_diff(pr_url: str) -> str:
-    diff_url = pr_url + ".diff"
+def get_pr_diff(diff_url: str) -> str:
     resp = requests.get(diff_url, headers={"Authorization": f"token {GITHUB_TOKEN}"})
     resp.raise_for_status()
     return resp.text
+
+def get_pr_commits(repo: str, pr_number: int) -> list[str]:
+    """Fetch commit messages for a PR."""
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/commits"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    resp = requests.get(url, headers=headers)
+    resp.raise_for_status()
+    commits = resp.json()
+    return [c["commit"]["message"] for c in commits]
 
 def update_pr_description(repo: str, pr_number: int, body: str):
     url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
