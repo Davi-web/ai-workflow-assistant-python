@@ -39,10 +39,11 @@ This project is deployed as an AWS Lambda function, triggered by GitHub webhooks
    ```
    # Make a folder for dependencies
    mkdir package
-   pip install -r requirements.txt --target ./package
+   pip install -r requirements.txt --target ./package --no-cache-dir
+
 
    # Copy Lambda function and utils
-   cp lambda_function.py package/
+   cp lambda_pr_webhook.py package/
    cp -r utils package/
 
    # Zip everything
@@ -50,3 +51,4 @@ This project is deployed as an AWS Lambda function, triggered by GitHub webhooks
    zip -r ../lambda_pr_webhook.zip .
    cd ..
    # Upload lambda_pr_webhook into lambda
+ cp lambda_pr_webhook.zip /mnt/c/Users/David/Coding/ai-workflow-assistant-python
