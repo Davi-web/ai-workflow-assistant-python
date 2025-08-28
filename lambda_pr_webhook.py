@@ -40,7 +40,8 @@ def handler(event, context):
     pr_id = str(pr.get("id")) + "-" + str(pr_number)
     author = pr.get("user", {}).get("login")
     reviewers = [r.get("login") for r in pr.get("requested_reviewers", [])]
-
+    pr_created_at = pr.get("created_at")  # GitHub PR creation timestamp
+    pr_updated_at = pr.get("updated_at")  # GitHub PR last update timestamp
     logger.info(f"Processing PR {pr_number} in {repo}, {diff_url}")
 
     try:
@@ -69,10 +70,10 @@ def handler(event, context):
             "changes": json.dumps(analysis.changes),  # List of changed files
             "impact": analysis.impact,       # Which parts of the codebase are affected
             "action_required": analysis.action_required, # What reviewers should do
-            "label": json.dumps(analysis.labels),         # Bug / Feature / Docs / etc.
+            "labels": json.dumps(analysis.labels),         # Bug / Feature / Docs / etc.
             "commit_messages": json.dumps(commit_messages), # List of commit messages
-            "created_at": datetime.utcnow().isoformat(),  # PR creation timestamp
-            "updated_at": datetime.utcnow().isoformat(),  # Last updated timestamp
+            "created_at": pr_created_at,  # PR creation timestamp
+            "updated_at": pr_updated_at,  # Last updated timestamp
             "status": action,                       # open / closed / merged
             "author": author,                        # PR author
             "reviewers": json.dumps(reviewers)       # List of reviewers
