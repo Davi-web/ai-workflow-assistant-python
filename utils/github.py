@@ -8,11 +8,10 @@ def get_pr_diff(diff_url: str) -> str:
     resp.raise_for_status()
     return resp.text
 
-def get_pr_commits(repo: str, pr_number: int) -> list[str]:
+def get_pr_commits(commit_url: str) -> list[str]:
     """Fetch commit messages for a PR."""
-    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/commits"
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-    resp = requests.get(url, headers=headers)
+    resp = requests.get(commit_url, headers=headers)
     resp.raise_for_status()
     commits = resp.json()
     return [c["commit"]["message"] for c in commits]
