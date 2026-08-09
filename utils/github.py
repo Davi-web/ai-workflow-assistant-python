@@ -3,6 +3,13 @@ import os
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
+def get_pr(repo: str, pr_number: int) -> dict:
+    """Fetch a single PR's data (same shape as the webhook's pull_request object)."""
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
+    resp = requests.get(url, headers={"Authorization": f"token {GITHUB_TOKEN}"})
+    resp.raise_for_status()
+    return resp.json()
+
 def get_pr_diff(diff_url: str) -> str:
     resp = requests.get(diff_url, headers={"Authorization": f"token {GITHUB_TOKEN}"})
     resp.raise_for_status()

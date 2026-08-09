@@ -3,13 +3,13 @@ import logging
 from utils import github, openai_utils
 from pydantic import BaseModel
 import boto3
-from datetime import datetime
+from botocore.exceptions import ClientError
 import os
 
 
 class PRAnalysis(BaseModel):
     title: str
-    summary: str  # ✅ fixed (was int before)
+    summary: str
     changes: list[str]
     impact: str
     action_required: str
@@ -40,51 +40,41 @@ def handler(event, context):
     pr_id = f"{pr.get('id')}-{pr_number}"
     author = pr.get("user", {}).get("login")
     reviewers = [r.get("login") for r in pr.get("requested_reviewers", [])]
-    pr_created_at = pr.get("created_at")  # GitHub PR creation timestamp
-    pr_updated_at = pr.get("updated_at")  # GitHub PR last update timestamp
+    pr_created_at = pr.get("created_at")
+    pr_updated_at = pr.get("updated_at")
 
-    logger.info(f"Processing PR {pr_number} in {repo}, {diff_url}")
-    logger.info(f"Action received: {action}")
+    logger.info(f"Processing PR {pr_number} in {repo}, action={action}")
+
     try:
+        if action == "closed" and pr.get("merged") is True:
+            try:
+                table.update_item(
+                    Key={"pr_id": pr_id, "repo": repo},
+                    UpdateExpression="SET updated_at = :updated_at, #s = :status",
+                    ConditionExpression="attribute_exists(pr_id)",
+                    ExpressionAttributeNames={"#s": "status"},
+                    ExpressionAttributeValues={
+                        ":updated_at": pr_updated_at,
+                        ":status": "merged",
+                    },
+                )
+            except ClientError as e:
+                if e.response["Error"]["Code"] != "ConditionalCheckFailedException":
+                    raise
+                logger.warning(
+                    f"No existing record for {pr_id}, skipping merged-status update"
+                )
+            logger.info(f"PR was merged, skipping analysis: {pr_id}")
+            return {"statusCode": 200, "body": json.dumps({"status": "merged"})}
+
+        allowed_actions = {"opened", "synchronize", "reopened"}
+        if action not in allowed_actions:
+            logger.info(f"Skipping analysis for action: {action}, {pr_id}")
+            return {"statusCode": 200, "body": json.dumps({"status": "ignored"})}
+
         commit_messages = github.get_pr_commits(commit_url)
 
-        # Only analyze PR if opened, updated, or reopened
-        if action not in ["opened", "synchronize", "reopened"]:
-            if action == "closed" and pr.get("merged") is True:
-                table.update_item(
-                Key={"pr_id": pr_id, "repo": repo},  # ✅ ensure table schema only uses pr_id as key
-                UpdateExpression=(
-                    "SET updated_at = :updated_at, #s = :status"
-                ),
-                ExpressionAttributeNames={"#s": "status"},
-                ExpressionAttributeValues={
-                    ":updated_at": pr_updated_at,
-                    ":status": "merged",
-                   
-                },
-                )
-                logger.info("PR was merged, skipping analysis")
-                print("PR was merged, skipping analysis")
-                return {"statusCode": 200, "body": json.dumps({"status": "merged"})}
-            logger.info("Skipping analysis for action: {action}, {pr_id}") 
-            table.update_item(
-                Key={"pr_id": pr_id, "repo": repo},  # ✅ ensure table schema only uses pr_id as key
-                UpdateExpression=(
-                    "SET updated_at = :updated_at, #s = :status, reviewers = :reviewers, commit_messages = :commit_messages"
-                ),
-                ExpressionAttributeNames={"#s": "status"},
-                ExpressionAttributeValues={
-                    ":updated_at": pr_updated_at,
-                    ":status": action,
-                    ":reviewers": json.dumps(reviewers),
-                    ":commit_messages": json.dumps(commit_messages),
-                },
-            )
-            logger.info("Exiting early with ignored status")
-            print("Exiting early with ignored status")
-            return {"statusCode": 200, "body": json.dumps({"status": "ignored"})}
         logger.info("Continuing with PR analysis")
-        # Otherwise run analysis
         diff_text = github.get_pr_diff(diff_url)
         analysis: PRAnalysis = openai_utils.summarize_diff(diff_text, commit_messages)
 
@@ -99,11 +89,9 @@ def handler(event, context):
 **Impact:** {analysis.impact}
 **Action Required:** {analysis.action_required}"""
 
-        # Update GitHub
         github.update_pr_description(repo, pr_number, full_summary)
         github.add_pr_labels(repo, pr_number, analysis.labels)
 
-        # Save in DynamoDB
         table.put_item(
             Item={
                 "pr_id": pr_id,
@@ -127,5 +115,5 @@ def handler(event, context):
     except Exception as e:
         logger.error(f"Error processing PR: {e}", exc_info=True)
         return {"statusCode": 500, "body": str(e)}
-    print("Exiting normally with ok status")
+
     return {"statusCode": 200, "body": json.dumps({"status": "ok"})}
